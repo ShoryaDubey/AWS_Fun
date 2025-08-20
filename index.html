@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Food Order – Serverless Demo UI</title>
+  <style>
+    :root {
+      --bg: #0f172a;       /* slate-900 */
+      --panel: #111827;    /* gray-900 */
+      --muted: #94a3b8;    /* slate-400 */
+      --text: #e5e7eb;     /* gray-200 */
+      --accent: #22c55e;   /* green-500 */
+      --accent-2: #3b82f6; /* blue-500 */
+      --error: #ef4444;    /* red-500 */
+      --border: #1f2937;   /* gray-800 */
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 15% -10%, #1f2937 0%, var(--bg) 40%), var(--bg);
+      color: var(--text);
+    }
+    .wrap { max-width: 980px; margin: 40px auto; padding: 0 16px; }
+    header { text-align: center; margin-bottom: 24px; }
+    h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: .2px; }
+    header p { margin: 0; color: var(--muted); font-size: 14px; }
+
+    .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media (min-width: 900px) { .grid { grid-template-columns: 1.2fr .8fr; } }
+
+    .card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.0)); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+    .card h2 { margin: 0 0 12px; font-size: 18px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    input[type="text"], input[type="number"], input[type="email"], textarea, select {
+      width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: #0b1220; color: var(--text);
+    }
+    textarea { min-height: 90px; resize: vertical; }
+    button { cursor: pointer; border: 0; border-radius: 12px; padding: 10px 14px; font-weight: 600; }
+    .btn-primary { background: var(--accent); color: #07110a; }
+    .btn-secondary { background: var(--accent-2); color: #061028; }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+
+    .muted { color: var(--muted); font-size: 13px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .stack { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .sep { height: 1px; background: var(--border); margin: 14px 0; }
+
+    .notice { padding: 10px 12px; border-radius: 10px; background: #0b1220; border: 1px dashed var(--border); color: var(--muted); font-size: 13px; }
+    .error { color: var(--error); }
+    .success { color: var(--accent); }
+    .out { background: #0b1220; border: 1px solid var(--border); border-radius: 10px; padding: 12px; min-height: 44px; white-space: pre-wrap; }
+
+    footer { margin-top: 24px; text-align: center; color: var(--muted); font-size: 12px; }
+    a { color: var(--accent-2); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Food Order – Serverless Demo</h1>
+      <p>API Gateway + Lambda + SQS + DynamoDB + SNS (HTML-only UI)</p>
+    </header>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div class="stack">
+        <span class="muted">API Base URL</span>
+        <input id="apiBase" type="text" placeholder="https://your-api-id.execute-api.<region>.amazonaws.com/prod" />
+        <button class="btn-ghost" onclick="persistApiBase()">Save</button>
+        <button class="btn-ghost" onclick="resetApiBase()">Reset</button>
+      </div>
+      <div class="muted" style="margin-top:8px;">Ensure CORS is enabled on your API methods.</div>
+    </div>
+
+    <div class="grid">
+      <!-- Place Order -->
+      <section class="card">
+        <h2>Place an Order</h2>
+        <form id="orderForm">
+          <div class="row">
+            <div>
+              <label>Customer Name</label>
+              <input name="customerName" type="text" placeholder="Jane Doe" required />
+            </div>
+            <div>
+              <label>Email (for notifications)</label>
+              <input name="email" type="email" placeholder="jane@example.com" required />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label>Phone (optional)</label>
+              <input name="phone" type="text" placeholder="+91XXXXXXXXXX" />
+            </div>
+            <div>
+              <label>Item</label>
+              <select name="item" required>
+                <option value="Margherita Pizza">Margherita Pizza</option>
+                <option value="Veg Burger">Veg Burger</option>
+                <option value="Pasta Arrabbiata">Pasta Arrabbiata</option>
+                <option value="Masala Dosa">Masala Dosa</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label>Quantity</label>
+              <input name="quantity" type="number" min="1" step="1" value="1" required />
+            </div>
+            <div>
+              <label>Priority</label>
+              <select name="priority">
+                <option value="normal">Normal</option>
+                <option value="express">Express</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label>Delivery Address</label>
+            <textarea name="address" placeholder="House, Street, City, Pincode" required></textarea>
+          </div>
+          <div class="stack" style="margin-top:10px;">
+            <button class="btn-primary" type="submit">Submit Order</button>
+            <button class="btn-ghost" type="reset">Clear</button>
+          </div>
+        </form>
+        <div class="sep"></div>
+        <div class="muted">Response</div>
+        <div id="orderOut" class="out"></div>
+      </section>
+
+      <!-- Track Order -->
+      <section class="card">
+        <h2>Track Order Status</h2>
+        <form id="statusForm" class="stack">
+          <input name="orderId" type="text" placeholder="Enter Order ID" required />
+          <button class="btn-secondary" type="submit">Check Status</button>
+          <button class="btn-ghost" type="button" onclick="useLastOrderId()">Use Last Order</button>
+        </form>
+        <div class="sep"></div>
+        <div class="muted">Status</div>
+        <div id="statusOut" class="out"></div>
+
+        <div class="sep"></div>
+        <div class="notice">
+          <strong>Endpoints (expected by this page)</strong>
+          <ul>
+            <li><span class="mono">POST /order</span> → returns <span class="mono">{ orderId, status }</span></li>
+            <li><span class="mono">GET /order/{orderId}</span> → returns <span class="mono">{ orderId, status, ... }</span></li>
+          </ul>
+          Include <span class="mono">email</span> in the order to trigger an SNS notification after processing.
+        </div>
+      </section>
+    </div>
+
+    <footer>
+      Built for the Event‑Driven Order Processing demo. Replace the API base URL above after deploying your API Gateway.
+    </footer>
+  </div>
+
+  <script>
+    // ---- Simple state helpers ----
+    const apiBaseInput = document.getElementById('apiBase');
+    const ORDER_KEY = 'demo:lastOrderId';
+    const API_BASE_KEY = 'demo:apiBase';
+
+    function loadApiBase() {
+      const v = localStorage.getItem(API_BASE_KEY) || '';
+      apiBaseInput.value = v;
+      return v;
+    }
+    function persistApiBase() {
+      localStorage.setItem(API_BASE_KEY, apiBaseInput.value.trim());
+      toast('Saved API Base URL');
+    }
+    function resetApiBase() {
+      localStorage.removeItem(API_BASE_KEY);
+      apiBaseInput.value = '';
+      toast('Reset API Base URL');
+    }
+    function api(path) {
+      const base = apiBaseInput.value.trim();
+      if (!base) throw new Error('Set API Base URL first.');
+      return base.replace(/\/$/, '') + path;
+    }
+    function saveLastOrderId(id) {
+      try { localStorage.setItem(ORDER_KEY, id); } catch {}
+    }
+    function getLastOrderId() { return localStorage.getItem(ORDER_KEY) || ''; }
+    function useLastOrderId() {
+      const last = getLastOrderId();
+      if (!last) return toast('No recent order found');
+      const form = document.getElementById('statusForm');
+      form.orderId.value = last;
+      toast('Filled with your last order ID');
+    }
+
+    // ---- UI helpers ----
+    function setOut(id, text, ok=true) {
+      const el = document.getElementById(id);
+      el.textContent = typeof text === 'string' ? text : JSON.stringify(text, null, 2);
+      el.classList.toggle('error', !ok);
+      el.classList.toggle('success', ok);
+    }
+    let toastTimer;
+    function toast(msg) {
+      clearTimeout(toastTimer);
+      const t = document.createElement('div');
+      t.textContent = msg;
+      t.style.position = 'fixed';
+      t.style.bottom = '18px';
+      t.style.left = '50%';
+      t.style.transform = 'translateX(-50%)';
+      t.style.padding = '10px 14px';
+      t.style.background = '#0b1220';
+      t.style.border = '1px solid var(--border)';
+      t.style.borderRadius = '12px';
+      t.style.color = 'var(--text)';
+      t.style.zIndex = '9999';
+      document.body.appendChild(t);
+      toastTimer = setTimeout(() => t.remove(), 1600);
+    }
+
+    // ---- Submit Order ----
+    document.getElementById('orderForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const fd = new FormData(e.target);
+        const payload = Object.fromEntries(fd.entries());
+        payload.quantity = Number(payload.quantity);
+        const res = await fetch(api(''), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status + ' — check CORS and API logs');
+        const data = await res.json();
+        setOut('orderOut', data, true);
+        if (data.orderId) { saveLastOrderId(String(data.orderId)); }
+        toast('Order submitted');
+        e.target.reset();
+      } catch (err) {
+        setOut('orderOut', String(err), false);
+        toast('Order failed');
+      }
+    });
+
+    // ---- Check Status ----
+    document.getElementById('statusForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const orderId = e.target.orderId.value.trim();
+        if (!orderId) throw new Error('Enter Order ID');
+        const res = await fetch(api(`/order/${encodeURIComponent(orderId)}`));
+        if (!res.ok) throw new Error('HTTP ' + res.status + ' — check API Gateway mapping');
+        const data = await res.json();
+        setOut('statusOut', data, true);
+        toast('Status loaded');
+      } catch (err) {
+        setOut('statusOut', String(err), false);
+        toast('Status failed');
+      }
+    });
+
+    // Init
+    loadApiBase();
+  </script>
+</body>
+</html>
