@@ -13,16 +13,16 @@ def recevingOrder(event, context):
         # Add delivery status
         order["status"] = "delivered"
         
-        # Ensure emailId exists
-        if "emailId" in order and order["emailId"]:
-            subject = f"Order {order['orderId']} Update"
+        # Ensure email exists
+        if "email" in order and order["email"]:
+            subject = f"Order Update - {order.get('item', 'Unknown Item')}"
             body = f"""
-            Hello,
+            Hello {order.get('customerName', '')},
             
             Your order has been processed!
             
-            Order ID: {order['orderId']}
             Item: {order['item']}
+            Quantity: {order.get('quantity', 1)}
             Status: {order['status']}
             
             Thank you for ordering with us.
@@ -32,15 +32,15 @@ def recevingOrder(event, context):
             ses.send_email(
                 Source=SENDER_EMAIL,
                 Destination={
-                    "ToAddresses": [order["emailId"]]
+                    "ToAddresses": [order["email"]]
                 },
                 Message={
                     "Subject": {"Data": subject},
                     "Body": {"Text": {"Data": body}}
                 }
             )
-            print(f"Email sent to {order['emailId']} for order {order['orderId']}")
+            print(f"Email sent to {order['email']} for {order['item']}")
         else:
-            print("No emailId provided in order message")
+            print("No email provided in order message")
 
     return {"statusCode": 200}

@@ -1,17 +1,38 @@
-import boto3, json, os
+import os
+import json
+import boto3
 
 sqs = boto3.client("sqs")
-QUEUE_URL = os.environ["QUEUE_URL"]
+queue_url = os.environ.get("SQS_QUEUE_URL")
 
-def lambda_handler(event, context):
-    body = json.loads(event["body"]) 
+def handler(event, context):
+    try:
+        # Parse body if using API Gateway proxy integration
+        body = event.get("body")
+        if isinstance(body, str):
+            body = json.loads(body)
 
-    response = sqs.send_message(
-        QueueUrl=QUEUE_URL,
-        MessageBody=json.dumps(body)
-    )
+        # Send to SQS
+        resp = sqs.send_message(
+            QueueUrl=queue_url,
+            MessageBody=json.dumps(body)
+        )
 
-    return {
-        "statusCode": 200,
-        "body": json.dumps({"messageId": response["MessageId"], "status": "Order received"})
-    }
+        return {
+            "statusCode": 200,
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*"
+            },
+            "body": json.dumps({
+                "message": "Order sent",
+                "MessageId": resp["MessageId"]
+            })
+        }
+
+    except Exception as e:
+        return {
+            "statusCode": 500,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"error": str(e)})
+        }

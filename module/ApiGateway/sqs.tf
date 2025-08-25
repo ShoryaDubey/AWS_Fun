@@ -18,38 +18,42 @@ resource "aws_sqs_queue" "orders" {
   }
 }
 
-resource "aws_sqs_queue_policy" "queue_policy" {
-  queue_url = aws_sqs_queue.orders.id
+resource "aws_iam_role_policy" "producer_lambda_policy" {
+  name = "producer-lambda-sqs-policy"
+  role = aws_iam_role.producer_lambda_exec.id
 
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
       {
-        Sid       = "AllowProducerSend",
-        Effect    = "Allow",
-        Principal = {
-          AWS = aws_iam_role.lambda_exec.arn
-        },
-        Action    = [
+        Effect = "Allow",
+        Action = [
           "sqs:SendMessage",
-          "sqs:GetQueueAttributes",
-          "sqs:GetQueueUrl"
+          "sqs:GetQueueUrl",
+          "sqs:GetQueueAttributes"
         ],
-        Resource  = aws_sqs_queue.orders.arn
-      },
+        Resource = aws_sqs_queue.orders.arn
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "consumer_policy" {
+  name = "consumer-sqs-policy"
+  role = aws_iam_role.consumer_lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
       {
-        Sid       = "AllowConsumerReceive",
-        Effect    = "Allow",
-        Principal = {
-          AWS = aws_iam_role.lambda_exec.arn
-        },
-        Action    = [
+        "Effect" = "Allow",
+        "Action" = [
           "sqs:ReceiveMessage",
           "sqs:DeleteMessage",
           "sqs:GetQueueAttributes",
           "sqs:GetQueueUrl"
         ],
-        Resource  = aws_sqs_queue.orders.arn
+      "Resource" = aws_sqs_queue.orders.arn
       }
     ]
   })

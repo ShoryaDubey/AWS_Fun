@@ -18,22 +18,22 @@ resource "aws_api_gateway_method" "post_order" {
 }
 
 # POST Method Response (CORS headers declared)
-resource "aws_api_gateway_method_response" "post_response" {
-  rest_api_id = aws_api_gateway_rest_api.orders_api.id
-  resource_id = aws_api_gateway_resource.order.id
-  http_method = aws_api_gateway_method.post_order.http_method
-  status_code = "200"
+# resource "aws_api_gateway_method_response" "post_response" {
+#   rest_api_id = aws_api_gateway_rest_api.orders_api.id
+#   resource_id = aws_api_gateway_resource.order.id
+#   http_method = aws_api_gateway_method.post_order.http_method
+#   status_code = "200"
 
-  response_parameters = {
-    "method.response.header.Access-Control-Allow-Origin"  = true
-    "method.response.header.Access-Control-Allow-Methods" = true
-    "method.response.header.Access-Control-Allow-Headers" = true
-  }
+#   response_parameters = {
+#     "method.response.header.Access-Control-Allow-Origin"  = true
+#     "method.response.header.Access-Control-Allow-Methods" = true
+#     "method.response.header.Access-Control-Allow-Headers" = true
+#   }
 
-  response_models = {
-    "application/json" = "Empty"
-  }
-}
+#   response_models = {
+#     "application/json" = "Empty"
+#   }
+# }
 
 # POST Integration (Lambda)
 resource "aws_api_gateway_integration" "lambda_integration" {
@@ -42,22 +42,22 @@ resource "aws_api_gateway_integration" "lambda_integration" {
   http_method             = aws_api_gateway_method.post_order.http_method
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.recevingOrder.invoke_arn
+  uri                     = aws_lambda_function.producingOrder.invoke_arn
 }
 
-# POST Integration Response (map actual values)
-resource "aws_api_gateway_integration_response" "post_integration" {
-  rest_api_id = aws_api_gateway_rest_api.orders_api.id
-  resource_id = aws_api_gateway_resource.order.id
-  http_method = aws_api_gateway_method.post_order.http_method
-  status_code = aws_api_gateway_method_response.post_response.status_code
+# # POST Integration Response (map actual values)
+# resource "aws_api_gateway_integration_response" "post_integration" {
+#   rest_api_id = aws_api_gateway_rest_api.orders_api.id
+#   resource_id = aws_api_gateway_resource.order.id
+#   http_method = aws_api_gateway_method.post_order.http_method
+#   status_code = aws_api_gateway_method_response.post_response.status_code
 
-  response_parameters = {
-    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
-    "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,OPTIONS'"
-    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,Authorization'"
-  }
-}
+#   response_parameters = {
+#     "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+#     "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,OPTIONS'"
+#     "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,Authorization'"
+#   }
+# }
 
 # OPTIONS Method (for CORS preflight)
 resource "aws_api_gateway_method" "options_order" {
@@ -123,7 +123,6 @@ resource "aws_api_gateway_deployment" "orders_deploy" {
   depends_on = [
     aws_api_gateway_integration.lambda_integration,
     aws_api_gateway_integration.options_integration,
-    aws_api_gateway_integration_response.post_integration,
     aws_api_gateway_integration_response.options_integration_response
   ]
 }
