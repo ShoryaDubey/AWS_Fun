@@ -1,14 +1,15 @@
 resource "aws_lambda_function" "recevingOrder" {
   filename         = "recevingOrder_function.zip"
   function_name    = "recevingOrder"
-  handler          = "recevingOrder_function.recevingOrder"
+  handler          = "recevingOrder_function.handler"
   role             = aws_iam_role.consumer_lambda_exec.arn
   source_code_hash = filebase64sha256("recevingOrder_function.zip")   
   runtime = "python3.9"
 
   environment {
     variables = {
-      SENDER_EMAIL = "shorya@gmail.com" 
+      SENDER_EMAIL = "shoryadwivedi00@gmail.com" 
+      DYNAMO_TABLE = aws_dynamodb_table.orders.name
     }
   }
 
@@ -18,6 +19,25 @@ resource "aws_lambda_function" "recevingOrder" {
   }
 }
 
+resource "aws_lambda_function" "getOrder" {
+  filename         = "getOrder_function.zip"
+  function_name    = "getOrder"
+  handler          = "getOrder_function.handler"
+  role             = aws_iam_role.get_lambda_exec.arn
+  source_code_hash = filebase64sha256("getOrder_function.zip")   
+  runtime = "python3.9"
+
+  environment {
+    variables = {
+      DYNAMO_TABLE = aws_dynamodb_table.orders.name
+    }
+  }
+
+  tags = {
+    Environment = "dev"
+    Application = "example"
+  }
+}
 
 resource "aws_lambda_event_source_mapping" "sqs_to_lambda" {
   event_source_arn = aws_sqs_queue.orders.arn

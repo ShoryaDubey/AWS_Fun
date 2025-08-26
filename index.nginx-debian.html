@@ -135,10 +135,15 @@
       <!-- Track Order -->
       <section class="card">
         <h2>Track Order Status</h2>
-        <form id="statusForm" class="stack">
-          <input name="orderId" type="text" placeholder="Enter Order ID" required />
-          <button class="btn-secondary" type="submit">Check Status</button>
-          <button class="btn-ghost" type="button" onclick="useLastOrderId()">Use Last Order</button>
+        <form id="statusForm" class="stack" style="flex-direction: column; align-items: stretch;">
+          <div class="row">
+            <input name="orderId" type="text" placeholder="Enter Order ID" required />
+            <input name="email" type="email" placeholder="Enter your Email" required />
+          </div>
+          <div class="stack" style="margin-top:10px;">
+            <button class="btn-secondary" type="submit">Check Status</button>
+            <button class="btn-ghost" type="button" onclick="useLastOrderId()">Use Last Order</button>
+          </div>
         </form>
         <div class="sep"></div>
         <div class="muted">Status</div>
@@ -149,12 +154,11 @@
           <strong>Endpoints (expected by this page)</strong>
           <ul>
             <li><span class="mono">POST /order</span> → returns <span class="mono">{ orderId, status }</span></li>
-            <li><span class="mono">GET /order/{orderId}</span> → returns <span class="mono">{ orderId, status, ... }</span></li>
+            <li><span class="mono">GET /order/{orderId}?email={email}</span> → returns <span class="mono">{ orderId, status, ... }</span></li>
           </ul>
-          Include <span class="mono">email</span> in the order to trigger an SNS notification after processing.
         </div>
       </section>
-    </div>
+
 
     <footer>
       Built for the Event‑Driven Order Processing demo. Replace the API base URL above after deploying your API Gateway.
@@ -231,7 +235,7 @@
         const fd = new FormData(e.target);
         const payload = Object.fromEntries(fd.entries());
         payload.quantity = Number(payload.quantity);
-        const res = await fetch(api(''), {
+        const res = await fetch(api('/order'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -249,21 +253,24 @@
     });
 
     // ---- Check Status ----
-    document.getElementById('statusForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      try {
-        const orderId = e.target.orderId.value.trim();
-        if (!orderId) throw new Error('Enter Order ID');
-        const res = await fetch(api(`/order/${encodeURIComponent(orderId)}`));
-        if (!res.ok) throw new Error('HTTP ' + res.status + ' — check API Gateway mapping');
-        const data = await res.json();
-        setOut('statusOut', data, true);
-        toast('Status loaded');
-      } catch (err) {
-        setOut('statusOut', String(err), false);
-        toast('Status failed');
-      }
-    });
+      document.getElementById('statusForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          const orderId = e.target.orderId.value.trim();
+          const email = e.target.email.value.trim();
+          if (!orderId || !email) throw new Error('Enter both Order ID and Email');
+          
+          const url = api(`/order/${encodeURIComponent(orderId)}?email=${encodeURIComponent(email)}`);
+          const res = await fetch(url);
+          if (!res.ok) throw new Error('HTTP ' + res.status + ' — check API Gateway mapping');
+          const data = await res.json();
+          setOut('statusOut', data, true);
+          toast('Status loaded');
+        } catch (err) {
+          setOut('statusOut', String(err), false);
+          toast('Status failed');
+        }
+      });
 
     // Init
     loadApiBase();
